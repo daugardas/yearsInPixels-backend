@@ -2,9 +2,12 @@ var express = require('express');
 var bcrypt = require('bcrypt');
 var router = express.Router();
 var r = require('rethinkdb'); // database
+var jwt = require('jsonwebtoken');
+
 /* POST register. */
 router.post('/register', function (req, res, next) {
 
+  res.header('Access-Control-Allow-Origin', '*');
   bcrypt.hash(req.body.password, 10, function (err, hash) {
     if (err) next(err);
     // check if such an username already exists
@@ -14,7 +17,7 @@ router.post('/register', function (req, res, next) {
       if (err) next(err);
 
       if (user === false) { // if user doesnt exists
-
+        
         const user = {
           username: req.body.username.toLowerCase(),
           password: hash,
@@ -25,12 +28,19 @@ router.post('/register', function (req, res, next) {
         // create user
         r.table('users').insert(user).run(req._dbconn, function (err, result) {
           if (err) next(err);
-          res.status(201).send("Succesufully registered");
+          let jsonResponse = {
+            status: 201, data: null, message: "Registered" 
+          };
+          res.send(jsonResponse);
         });
 
       } else {
         // send an error
-        res.status(500).send("User already exists");
+        let jsonResponse = {
+          status: 500, data: null, message: "User with such a username exists" 
+        };
+
+        res.send(jsonResponse);
       }
     })
 
@@ -39,6 +49,7 @@ router.post('/register', function (req, res, next) {
 /* POST login */
 router.post('/login', function (req, res, next) {
   // check if user with such an username exists
+  res.header('Access-Control-Allow-Origin', '*');
   r.table('users').filter({
     username: req.body.username.toLowerCase()
   }).run(req._dbconn, function (err, cursor) {
@@ -54,16 +65,31 @@ router.post('/login', function (req, res, next) {
 
           if (correctPass) {
             // Logged in
-            res.status(201).send("Succesfully logged in");
+            //console.log(user);
+
+            var token = jwt.sign(user[0], process.env.JWT_SECRET, {
+              expiresIn: "1d"
+            });
+            let jsonResponse = {
+              status: 201, data: null, message: "Logged in", token: token
+            };
+            res.json(jsonResponse);
           } else {
             // Incorrect pass
-            res.status(500).send("Incorrect password");
+            let jsonResponse = {
+              status: 500, data: null, message: "Incorrect password" 
+            };
+
+            res.json(jsonResponse);
           }
         })
       });
     } else {
       // send error
-      res.status(500).send("User with such an username doesn't exist");
+      let jsonResponse = {
+        status: 500, data: null, message: "User with such an username doesn't exist" 
+      };
+      res.json(jsonResponse);
     }
   });
 });
