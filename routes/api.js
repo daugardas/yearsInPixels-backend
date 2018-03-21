@@ -3,6 +3,7 @@ var bcrypt = require('bcrypt');
 var router = express.Router();
 var r = require('rethinkdb'); // database
 var jwt = require('jsonwebtoken');
+var TokenValidator = require('../middleware/TokenValidator');
 
 /* POST register. */
 router.post('/register', function (req, res, next) {
@@ -65,9 +66,13 @@ router.post('/login', function (req, res, next) {
 
           if (correctPass) {
             // Logged in
-            //console.log(user);
-
-            var token = jwt.sign(user[0], process.env.JWT_SECRET, {
+            userInformation = {
+              dateCreated: user[0].dateCreated,
+              email: user[0].email,
+              id: user[0].id,
+              username: user[0].username
+            };
+            var token = jwt.sign(userInformation, process.env.JWT_SECRET, {
               expiresIn: "1d"
             });
             let jsonResponse = {
@@ -92,6 +97,12 @@ router.post('/login', function (req, res, next) {
       res.json(jsonResponse);
     }
   });
+});
+
+router.use('/user', TokenValidator);
+/* GET USER DATA */
+router.get('/user', function(req, res, next){
+  res.send({"user": req.decoded});
 });
 
 module.exports = router;

@@ -7,7 +7,7 @@ var bodyParser = require('body-parser');
 require('dotenv').config();
 var r = require('rethinkdb'); // database
 var api = require('./routes/api');
-
+var cors = require('cors');
 var dbConfig = {
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
@@ -20,6 +20,7 @@ app.set('view engine', 'jade');
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use(cors());
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -30,6 +31,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(createConnection);
 
 app.use('/api', api);
+
 //close db connection
 app.use(closeConnection);
 
