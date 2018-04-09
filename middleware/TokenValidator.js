@@ -6,7 +6,6 @@ module.exports = function(req, res, next){
   // decode the token
   if(token){
     // verify secret and check if expired
-
     jwt.verify(token, process.env.JWT_SECRET, function(err, decoded){
       if(err) return res.json({"error": true, "message": 'Failed to authenticate token.'});
       // no err
