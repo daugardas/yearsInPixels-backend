@@ -5,6 +5,10 @@ var r = require('rethinkdb'); // database
 var jwt = require('jsonwebtoken');
 var TokenValidator = require('../middleware/TokenValidator');
 
+var moods = require('./moods');
+var users = require('./users');
+var journals = require('./journals');
+
 /* POST register. */
 router.post('/register', function (req, res, next) {
 
@@ -18,7 +22,7 @@ router.post('/register', function (req, res, next) {
       if (err) next(err);
 
       if (user === false) { // if user doesnt exists
-        
+
         const user = {
           username: req.body.username.toLowerCase(),
           password: hash,
@@ -30,7 +34,9 @@ router.post('/register', function (req, res, next) {
         r.table('users').insert(user).run(req._dbconn, function (err, result) {
           if (err) next(err);
           let jsonResponse = {
-            status: 201, data: null, message: "Registered" 
+            status: 201,
+            data: null,
+            message: "Registered"
           };
           res.send(jsonResponse);
         });
@@ -38,10 +44,12 @@ router.post('/register', function (req, res, next) {
       } else {
         // send an error
         let jsonResponse = {
-          status: 500, data: null, message: "User with such a username exists" 
+          status: 500,
+          data: null,
+          message: "User with such a username exists"
         };
 
-        res.send(jsonResponse);
+        res.status(500).send(jsonResponse);
       }
     })
 
@@ -56,9 +64,11 @@ router.post('/login', function (req, res, next) {
   }).run(req._dbconn, function (err, cursor) {
     if (err) next(err);
 
-    if (cursor) { // if user exists
-      cursor.toArray(function (err, user) {
-        if (err) next(err);
+
+    cursor.toArray(function (err, user) {
+      if (err) next(err);
+
+      if (user[0]) { // if user exists
         let hashPass = user[0].password;
         // compare passwords
         bcrypt.compare(req.body.password, hashPass, function (err, correctPass) {
@@ -76,33 +86,43 @@ router.post('/login', function (req, res, next) {
               expiresIn: "1d"
             });
             let jsonResponse = {
-              status: 201, data: null, message: "Logged in", token: token
+              status: 201,
+              data: userInformation,
+              message: "Logged in",
+              token: token
             };
             res.json(jsonResponse);
           } else {
             // Incorrect pass
             let jsonResponse = {
-              status: 500, data: null, message: "Incorrect password" 
+              status: 500,
+              data: null,
+              message: "Incorrect password"
             };
 
             res.json(jsonResponse);
           }
-        })
-      });
-    } else {
-      // send error
-      let jsonResponse = {
-        status: 500, data: null, message: "User with such an username doesn't exist" 
-      };
-      res.json(jsonResponse);
-    }
+        });
+
+      } else {
+        // send error
+        let jsonResponse = {
+          status: 500,
+          data: null,
+          message: "User with such an username doesn't exist"
+        };
+        res.json(jsonResponse);
+      }
+    });
+
   });
 });
 
-router.use('/user', TokenValidator);
-/* GET USER DATA */
-router.get('/user', function(req, res, next){
-  res.send({"user": req.decoded});
-});
+/* /user ROUTES */
+router.use('/user', TokenValidator, users);
+/* /moods ROUTES */
+router.use('/mood', TokenValidator, moods)
+/* /journal ROUTES */
+router.use('/journal', TokenValidator, journals);
 
 module.exports = router;
