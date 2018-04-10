@@ -38,18 +38,18 @@ router.post('/register', function (req, res, next) {
             data: null,
             message: "Registered"
           };
-          res.send(jsonResponse);
+          res.status(201).send(jsonResponse);
         });
 
       } else {
         // send an error
         let jsonResponse = {
-          status: 500,
+          status: 400,
           data: null,
           message: "User with such a username exists"
         };
 
-        res.status(500).send(jsonResponse);
+        res.status(400).send(jsonResponse);
       }
     })
 
@@ -91,27 +91,27 @@ router.post('/login', function (req, res, next) {
               message: "Logged in",
               token: token
             };
-            res.json(jsonResponse);
+            res.status(201).json(jsonResponse);
           } else {
             // Incorrect pass
             let jsonResponse = {
-              status: 500,
+              status: 401,
               data: null,
-              message: "Incorrect password"
+              message: "Wrong password"
             };
 
-            res.json(jsonResponse);
+            res.status(401).json(jsonResponse);
           }
         });
 
       } else {
         // send error
         let jsonResponse = {
-          status: 500,
+          status: 400,
           data: null,
           message: "User with such an username doesn't exist"
         };
-        res.json(jsonResponse);
+        res.status(400).json(jsonResponse);
       }
     });
 
