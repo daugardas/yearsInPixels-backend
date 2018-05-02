@@ -15,16 +15,17 @@ function internalServerErrorResponse(res, err, message) {
 }
 
 function getMoodsId(req) {
-  return r.uuid().run(req._dbconn, function (err, uuid) {
-    return new Promise(resolve => {
+  return new Promise(resolve => {
+    return r.uuid().run(req._dbconn, function (err, uuid) {
       if (err) {
         internalServerErrorResponse(res, err, "Error while generating UUID for moods");
         throw err;
       }
       resolve(uuid);
-    })
+    });
   });
 }
+
 
 function checkMoodPost(req) {
 
