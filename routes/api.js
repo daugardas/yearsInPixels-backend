@@ -7,7 +7,7 @@ var TokenValidator = require('../middleware/TokenValidator');
 
 var moods = require('./moods');
 var users = require('./users');
-var journals = require('./journals');
+
 
 /* POST register. */
 router.post('/register', function (req, res, next) {
@@ -122,7 +122,6 @@ router.post('/login', function (req, res, next) {
 router.use('/user', TokenValidator, users);
 /* /moods ROUTES */
 router.use('/mood', TokenValidator, moods)
-/* /journal ROUTES */
-router.use('/journal', TokenValidator, journals);
+
 
 module.exports = router;
