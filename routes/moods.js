@@ -26,7 +26,6 @@ function getMoodsId(req) {
   });
 }
 
-
 function checkMoodPost(req) {
 
   return new Promise(resolve => {
@@ -170,52 +169,37 @@ router.get('/', function (req, res, next) {
 });
 
 /* POST MOODS */
-router.post('/', function (req, res, next) {
-  // connect to database
+router.post('/', async function (req, res, next) {
 
-  r.table('moods').get(req.decoded.id).run(req._dbconn, async function (err, result) {
-    if (err) {
-      internalServerErrorResponse(res, err, "Error happened while trying to connect to database");
-      return next(err);
+  let moodsID;
+  try {
+    await checkMoodPost(req);
+    moodsID = await getMoodsId(req);
+  } catch (checkErr) {
+    let jsonResponse = {
+      status: 400,
+      message: checkErr
+    };
+    return res.status(400).json(jsonResponse);
+  }
+
+  let dayMoods = {
+    id: moodsID,
+    date: req.body.date,
+    dayMoods: req.body.dayMoods
+  }
+
+  r.table('moods').get(req.decoded.id).update({
+    moods: r.row("moods").append(dayMoods)
+  }).run(req._dbconn, function (updateErr, updateRes) {
+
+    if (updateErr) {
+      internalServerErrorResponse(res, updateErr, "Error when trying to append day moods to moods array in db");
+      return next(updateErr);
     }
 
-    try {
-      await checkMoodPost(req);
-    } catch (checkErr) {
-      let jsonResponse = {
-        status: 400,
-        message: checkErr
-      };
-      return res.status(400).json(jsonResponse);
-    }
-    const moodsID = await getMoodsId(req);
-
-    let dayMoods = {
-      id: moodsID,
-      date: req.body.date,
-      dayMoods: req.body.dayMoods
-    }
-
-    // if there is a document with a given id
-    if (result) {
-      // then add the day mood to the moods array in db
-      r.table('moods').get(req.decoded.id).update({
-        moods: r.row("moods").append(dayMoods)
-      }).run(req._dbconn, function (updateErr, updateRes) {
-        if (err) {
-          internalServerErrorResponse(res, updateErr, "Error when trying to append day moods to moods array in db");
-          return next(updateErr);
-        }
-
-        let jsonResponse = {
-          status: 200,
-          message: "Successfully inserted day moods data to database moods array."
-        };
-        return res.status(200).json(jsonResponse);
-      });
-
-    } else { // if there isn't, then create
-
+    if (updateRes.skipped > 0) { // document with such ID doesn't exist
+      // create a document
       r.table('moods').insert({
         id: req.decoded.id,
         moods: [dayMoods]
@@ -224,8 +208,6 @@ router.post('/', function (req, res, next) {
           internalServerErrorResponse(res, err, "Error when trying to insert moods data to database");
           return next(err);
         }
-
-        //console.log(result);
         let jsonResponse = {
           status: 200,
           message: "Successfully inserted moods data to database."
@@ -233,8 +215,15 @@ router.post('/', function (req, res, next) {
         return res.status(200).json(jsonResponse);
       });
 
+    } else {
+      let jsonResponse = {
+        status: 200,
+        message: "Successfully inserted day moods data to database moods array."
+      };
+      return res.status(200).json(jsonResponse);
     }
   });
+
 });
 
 /* PUT MOODS */
