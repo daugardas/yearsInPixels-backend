@@ -227,64 +227,54 @@ router.post('/', async function (req, res, next) {
 });
 
 /* PUT MOODS */
-router.put('/', function (req, res, next) {
+router.put('/', async function (req, res, next) {
 
-  //search for db document with client user id
   let userID = req.decoded.id;
+  
+  // verify request
+  try {
+    await checkMoodPut(req);
+  } catch (checkErr) {
+    let jsonResponse = {
+      status: 400,
+      message: checkErr
+    };
+    return res.status(400).json(jsonResponse);
+  }
 
-  r.table('moods').get(userID).run(req._dbconn, async function (userErr, result) {
-    if (userErr) {
-      internalServerErrorResponse(res, err, "Error happened while trying to connect to database");
+  r.table('moods').get(userID).update({
+    "moods": r.row('moods').map(function (mood) {
+      return r.branch(mood('id').eq(req.body.id), mood.merge({
+        "dayMoods": req.body.dayMoods
+      }), mood);
+    })
+  }).run(req._dbconn, function (err, result) {
+    if (err) {
+      internalServerErrorResponse(res, err, "Error happened while trying to update a mood");
       return next(err);
     }
-    //if user has moods
-    if (result) {
-      // check if request is valid
-      try {
-        await checkMoodPut(req);
-      } catch (checkErr) {
-        let jsonResponse = {
-          status: 400,
-          message: checkErr
-        };
-        return res.status(400).json(jsonResponse);
-      }
-
-
-
-      r.table('moods').get(userID).update({
-        "moods": r.row('moods').map(function (mood) {
-          return r.branch(mood('id').eq(req.body.id), mood.merge({
-            "dayMoods": req.body.dayMoods
-          }), mood);
-        })
-      }).run(req._dbconn, function (err, result) {
-        if (err) {
-          internalServerErrorResponse(res, err, "Error happened while trying to update a mood");
-          return next(err);
-        }
-
-        let jsonResponse = {
-          status: 200,
-          message: "Successfully updated a user mood."
-        };
-        return res.status(200).json(jsonResponse);
-      });
-
-
-    } else {
-      // send error
-      let jsonResponse = {
+    if (result.unchanged > 0) {
+      let response = {
         status: 400,
-        message: "User doesn't have any moods to update."
+        message: "Such mood id doesn't exist for this profile."
       };
-      return res.status(400).json(jsonResponse);
+
+      return res.status(400).json(response);
+    } else {
+
+      let response = {
+        status: 200,
+        message: "Successfully updated a user mood."
+      };
+      return res.status(200).json(response);
     }
+
   });
 });
 
 /* DELETE MOODS */
 router.delete('/', async function (req, res, next) {
+
   let userID = req.decoded.id;
 
   // verify request
