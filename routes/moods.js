@@ -183,12 +183,22 @@ router.post('/', async function (req, res, next) {
     return res.status(400).json(jsonResponse);
   }
 
-  let dayMoods = {
-    id: moodsID,
-    date: req.body.date,
-    dayMoods: req.body.dayMoods
+  let dayMoods;
+  if (req.body.hasOwnProperty('journal')) {
+    dayMoods = {
+      id: moodsID,
+      journal: req.body.journal,
+      date: req.body.date,
+      dayMoods: req.body.dayMoods
+    };
+  } else {
+    dayMoods = {
+      id: moodsID,
+      journal: null,
+      date: req.body.date,
+      dayMoods: req.body.dayMoods
+    };
   }
-
   r.table('moods').get(req.decoded.id).update({
     moods: r.row("moods").append(dayMoods)
   }).run(req._dbconn, function (updateErr, updateRes) {
@@ -228,9 +238,8 @@ router.post('/', async function (req, res, next) {
 
 /* PUT MOODS */
 router.put('/', async function (req, res, next) {
-
   let userID = req.decoded.id;
-  
+
   // verify request
   try {
     await checkMoodPut(req);
@@ -242,17 +251,30 @@ router.put('/', async function (req, res, next) {
     return res.status(400).json(jsonResponse);
   }
 
+  let merge;
+  if (req.body.hasOwnProperty('journal')) {
+    merge = {
+      "dayMoods": req.body.dayMoods,
+      "journal": req.body.journal
+    };
+  } else {
+    merge = {
+      "dayMoods": req.body.dayMoods,
+      "journal": null
+    };
+  }
+
   r.table('moods').get(userID).update({
     "moods": r.row('moods').map(function (mood) {
-      return r.branch(mood('id').eq(req.body.id), mood.merge({
-        "dayMoods": req.body.dayMoods
-      }), mood);
+      return r.branch(mood('id').eq(req.body.id), mood.merge(merge), mood);
     })
   }).run(req._dbconn, function (err, result) {
+
     if (err) {
       internalServerErrorResponse(res, err, "Error happened while trying to update a mood");
       return next(err);
     }
+
     if (result.unchanged > 0) {
       let response = {
         status: 400,
@@ -261,14 +283,12 @@ router.put('/', async function (req, res, next) {
 
       return res.status(400).json(response);
     } else {
-
       let response = {
         status: 200,
         message: "Successfully updated a user mood."
       };
       return res.status(200).json(response);
     }
-
   });
 });
 
