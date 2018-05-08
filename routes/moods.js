@@ -5,7 +5,6 @@ var jwt = require('jsonwebtoken');
 var TokenValidator = require('../middleware/TokenValidator');
 
 function internalServerErrorResponse(res, err, message) {
-  console.error(err);
   let jsonResponse = {
     status: 500,
     data: null,

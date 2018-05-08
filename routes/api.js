@@ -34,7 +34,7 @@ function checkUserData(username, password, email) {
     }
     let passwordRegExp = /^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))/g;
     if (!passwordRegExp.test(password)) {
-      
+
       errors.push(`Password must be least one lowercase letter and one number or one lowecase letter and uppercase letter`);
     }
 
@@ -110,11 +110,11 @@ router.post('/register', async function (req, res, next) {
   });
 });
 /* POST login */
-router.post('/login',async function (req, res, next) {
+router.post('/login', async function (req, res, next) {
 
   try {
     await checkPassword(req.body.password);
-  } catch (e){
+  } catch (e) {
     let response = {
       status: 400,
       message: e
