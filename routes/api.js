@@ -151,12 +151,12 @@ router.post('/login', async function (req, res, next) {
               expiresIn: "1d"
             });
             let jsonResponse = {
-              status: 201,
+              status: 200,
               data: userInformation,
               message: "Logged in",
               token: token
             };
-            return res.status(201).json(jsonResponse);
+            return res.status(200).json(jsonResponse);
           } else {
             // Incorrect pass
             let jsonResponse = {
