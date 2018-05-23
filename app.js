@@ -15,14 +15,7 @@ var dbConfig = {
 };
 var app = express();
 
-app.set('views', path.join(__dirname, 'views')); 
-app.set('view engine', 'jade');
-
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "*");
-  next();
-});
+app.use(cors());
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
