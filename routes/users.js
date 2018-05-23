@@ -17,23 +17,17 @@ function updateUser(dbConn, userID, username, email, password, updateCount) {
     if (updateErr) {
       throw updateErr
     }
-    console.error(updateCursor);
+    console.log(updateCursor);
   });
 }
-
 function deleteUser(dbConn, userID) {
   return new Promise(resolve => {
-    r.table('users').filter({
-      id: userID
-    }).update({
-      deleted: true
-    }).run(dbConn, function (err, result) {
+    r.table('users').get(userID).delete().run(dbConn, function (err, result) {
       if (err) throw err;
       resolve(result);
     });
   });
 }
-
 function internalServerErrorResponse(res, err, message) {
   console.error(err);
   let jsonResponse = {
@@ -43,9 +37,7 @@ function internalServerErrorResponse(res, err, message) {
   };
   res.status(500).json(jsonResponse);
 }
-
 function comparePasswords(received, existingHash) {
-
   return new Promise(resolve => {
     bcrypt.compare(received, existingHash, function (err, correctPass) {
       if (err) {
@@ -54,9 +46,7 @@ function comparePasswords(received, existingHash) {
       resolve(correctPass);
     });
   });
-
 }
-
 /* GET USER DATA */
 router.get('/', function (req, res) {
 
@@ -65,13 +55,8 @@ router.get('/', function (req, res) {
   });
 
 });
-/* POST USER DATA  although user data is already posted firsthand when creating a profile, so I probably don't need this route */
-router.post('/', function (req, res) {
-  res.status(501).send("POST /user is still being created");
-});
 /* PUT USER DATA */
 router.put('/', function (req, res, next) {
-  // comeback hell incoming
   r.table('users').filter({
     id: req.decoded.id
   }).run(req._dbconn, function (err, cursor) {
@@ -258,5 +243,4 @@ router.delete('/', function (req, res, next) {
 
   });
 });
-
 module.exports = router;

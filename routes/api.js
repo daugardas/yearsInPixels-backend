@@ -124,13 +124,14 @@ function generateResetLink(uID, date, req, res) {
     let link = `https://yearsinpixels.com/reset/${token}`;
     r.table('resetPassTokens').insert({
       token: token,
-    }).run(req._dbconn, function(err, res){
-      if(err) {
+      userID: uID
+    }).run(req._dbconn, function (err, res) {
+      if (err) {
         internalServerErrorResponse(res, "500: Internal server error.");
         throw "Error while inserting token to database";
       }
       return resolve(link);
-      
+
     });
   });
 }
@@ -358,11 +359,103 @@ router.post('/forgot', function (req, res, next) {
     });
   }
 });
+/* GET /forgot */
+router.get('/forgot', function (req, res, next) {
+  if (req.headers.authorization) {
+    const forgotToken = req.headers.authorization;
+    r.table('resetPassTokens').filter({
+      token: forgotToken
+    }).run(req._dbconn, function (err, cursor) {
+      if (err) {
+        internalServerErrorResponse(res, "Error while filtering database");
+        return next(err);
+      }
+      cursor.toArray(function (err, rows) {
+        if (err) {
+          internalServerErrorResponse(res, "Error while passing cursor to array.");
+          return next(err);
+        }
+        if (rows[0]) {
+          r.table('users').get(rows[0].userID).run(req._dbconn, function (err, result) {
+            if (err) {
+              internalServerErrorResponse(res, "Error while getting data about user from db");
+              return next(err);
+            }
+            if (result) {
+              let response = {
+                id: result.id,
+                username: result.username,
+                recoverToken: forgotToken
+              }
+              return res.status(200).json(response);
+            } else {
+              internalServerErrorResponse(res, "Error while getting data about user from db");
+              return next(err);
+            }
+          });
+        } else {
+          let response = {
+            error: "Such a token doesn't exist."
+          }
+          return res.status(400).json(response);
+        }
+      });
+    });
+  } else {
+    let response = {
+      error: "Request doesn't have an Authorization header with forgot token value"
+    };
+    return res.status(400).json(response);
+  }
+});
+router.use('/recover', function (req, res, next) {
+  const userID = req.body.id.trim();
+  const recoverToken = req.body.recoverToken.trim();
 
+  // check if an user id and recover token exist in the same document
+  r.table('resetPassTokens').filter({
+    userID: userID,
+    token: recoverToken
+  }).run(req._dbconn, function (err, cursor) {
+    if (err) {
+      internalServerErrorResponse(res, "Error while searching for a recover document.");
+      return next(err);
+    }
+    cursor.toArray(async function (err, rows) {
+      // if document exists
+      if (rows[0]) {
+        // encrypt new password
+        const newPassword = await bcrypt.hash(req.body.newPassword.trim(), 10);
+        // update password
+        r.table('users').get(userID).update({
+          password: newPassword
+        }).run(req._dbconn, function (err, result) {
+          if (err) {
+            internalServerErrorResponse(res, "Error while updating password.");
+            return next(err);
+          }
+          r.table('resetPassTokens').filter({
+            userID: userID
+          }).delete().run(req._dbconn, function(err, result){
+            if(err) next(err);
+            console.log(result)
+          })
+          const response = {
+            message: "You've succesfully reseted your password!"
+          }
+          return res.status(200).json(response);
+        });
+      } else {
+        const response = {
+          message: "Sorry, please request change to your password again."
+        }
+        return res.status(400).json(response);
+      }
+    });
+  });
+});
 /* /user ROUTES */
 router.use('/user', TokenValidator, users);
 /* /moods ROUTES */
 router.use('/mood', TokenValidator, moods)
-
-
 module.exports = router;
