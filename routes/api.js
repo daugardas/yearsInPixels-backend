@@ -146,10 +146,8 @@ router.post('/register', async function (req, res, next) {
       errors: e,
       message: "Bad user input."
     };
-
     return res.status(400).send(response);
   }
-
   bcrypt.hash(req.body.password.trim(), 10, function (err, hash) {
     if (err) next(err);
     // check if such an username already exists
@@ -183,29 +181,24 @@ router.post('/register', async function (req, res, next) {
               };
               return res.status(201).send(jsonResponse);
             });
-
           } else {
             // send an error
             let jsonResponse = {
               status: 400,
               message: "User with such an email exists."
             };
-
             return res.status(400).send(jsonResponse);
           }
         });
-
       } else {
         // send an error
         let jsonResponse = {
           status: 400,
           message: "User with such a username exists."
         };
-
         return res.status(400).send(jsonResponse);
       }
     })
-
   });
 });
 /* POST login */
@@ -283,7 +276,6 @@ router.post('/login', async function (req, res, next) {
 });
 /* POST forgot */
 router.post('/forgot', function (req, res, next) {
-
   // check if user wants to remember by username or password
   if (req.body.username) {
     // check if user with such an username exists
@@ -298,6 +290,7 @@ router.post('/forgot', function (req, res, next) {
             let resetLink = await generateResetLink(user[0].id, Date.now(), req, res); // using date and id to create an unique token
             await sendResetPass(user[0].username, user[0].email, resetLink);
           } catch (e) {
+            console.error(`error:`, e);
             let response = {
               error: "Sorry, server malfunctioned, couldn't send you an error :("
             };
@@ -327,13 +320,12 @@ router.post('/forgot', function (req, res, next) {
       if (err) next(err);
       cursor.toArray(async function (err, user) {
         if (err) next(err);
-
         if (user[0]) { // if user exists
-
           try {
-            let resetLink = await generateResetLink();
+            let resetLink = await generateResetLink(user[0].id, Date.now(), req, res); // using date and id to create an unique token
             await sendResetPass(user[0].username, user[0].email, resetLink);
           } catch (e) {
+            console.error(`error:`, e);
             let response = {
               error: "Sorry, server malfunctioned, couldn't send you an error :("
             };
