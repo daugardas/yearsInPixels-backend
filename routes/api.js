@@ -122,16 +122,34 @@ function generateResetLink(uID, date, req, res) {
       date: date
     }, process.env.JWT_SECRET);
     let link = `https://yearsinpixels.com/reset/${token}`;
-    r.table('resetPassTokens').insert({
-      token: token,
+    r.table('resetPassTokens').filter({
       userID: uID
-    }).run(req._dbconn, function (err, res) {
+    }).run(req._dbconn, function(err, cursor){
       if (err) {
         internalServerErrorResponse(res, "500: Internal server error.");
         throw "Error while inserting token to database";
       }
-      return resolve(link);
-
+      
+      cursor.toArray(function(err, rows){
+        if (err) {
+          internalServerErrorResponse(res, "500: Internal server error.");
+          throw "Error while inserting token to database";
+        }
+        if(!rows[0]){
+          r.table('resetPassTokens').insert({
+            token: token,
+            userID: uID
+          }).run(req._dbconn, function (err, res) {
+            if (err) {
+              internalServerErrorResponse(res, "500: Internal server error.");
+              throw "Error while inserting token to database";
+            }
+            return resolve(link);
+          });
+        } else {
+          return resolve(`https://yearsinpixels.com/reset/${rows[0].token}`)
+        }
+      });
     });
   });
 }
