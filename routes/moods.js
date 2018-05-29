@@ -133,7 +133,7 @@ function checkMoodDelete(req) {
 /* GET MOODS */
 router.get('/', function (req, res, next) {
   // find all user moods using user id
-  r.table("moods").filter({
+  r.db(process.env.DATA_DB).table("moods").filter({
     id: req.decoded.id
   }).run(req._dbconn, function (err, cursor) {
     if (err) {
@@ -198,7 +198,7 @@ router.post('/', async function (req, res, next) {
       dayMoods: req.body.dayMoods
     };
   }
-  r.table('moods').get(req.decoded.id).update({
+  r.db(process.env.DATA_DB).table('moods').get(req.decoded.id).update({
     moods: r.row("moods").append(dayMoods)
   }).run(req._dbconn, function (updateErr, updateRes) {
 
@@ -209,7 +209,7 @@ router.post('/', async function (req, res, next) {
 
     if (updateRes.skipped > 0) { // document with such ID doesn't exist
       // create a document
-      r.table('moods').insert({
+      r.db(process.env.DATA_DB).table('moods').insert({
         id: req.decoded.id,
         moods: [dayMoods]
       }).run(req._dbconn, function (err, result) {
@@ -263,7 +263,7 @@ router.put('/', async function (req, res, next) {
     };
   }
 
-  r.table('moods').get(userID).update({
+  r.db(process.env.DATA_DB).table('moods').get(userID).update({
     "moods": r.row('moods').map(function (mood) {
       return r.branch(mood('id').eq(req.body.id), mood.merge(merge), mood);
     })
@@ -307,7 +307,7 @@ router.delete('/', async function (req, res, next) {
     return res.status(400).json(response);
   }
 
-  r.table('moods').get(userID).update({
+  r.db(process.env.DATA_DB).table('moods').get(userID).update({
     "moods": r.row('moods').filter(mood => mood('id').ne(req.body.id))
   }).run(req._dbconn, function (err, result) {
     if (err) {

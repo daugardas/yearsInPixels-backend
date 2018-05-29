@@ -122,20 +122,20 @@ function generateResetLink(uID, date, req, res) {
       date: date
     }, process.env.JWT_SECRET);
     let link = `https://yearsinpixels.com/reset/${token}`;
-    r.table('resetPassTokens').filter({
+    r.db(process.env.DATA_DB).table('resetPassTokens').filter({
       userID: uID
-    }).run(req._dbconn, function(err, cursor){
+    }).run(req._dbconn, function (err, cursor) {
       if (err) {
         internalServerErrorResponse(res, "500: Internal server error.");
         throw "Error while inserting token to database";
       }
-      
-      cursor.toArray(function(err, rows){
+
+      cursor.toArray(function (err, rows) {
         if (err) {
           internalServerErrorResponse(res, "500: Internal server error.");
           throw "Error while inserting token to database";
         }
-        if(!rows[0]){
+        if (!rows[0]) {
           r.table('resetPassTokens').insert({
             token: token,
             userID: uID
@@ -169,7 +169,7 @@ router.post('/register', async function (req, res, next) {
   bcrypt.hash(req.body.password.trim(), 10, function (err, hash) {
     if (err) next(err);
     // check if such an username already exists
-    r.table('users').filter({
+    r.db(process.env.DATA_DB).table('users').filter({
       username: req.body.username.trim().toLowerCase()
     }).count().gt(0).run(req._dbconn, function (err, user) {
       if (err) next(err);
@@ -177,7 +177,7 @@ router.post('/register', async function (req, res, next) {
       if (user === false) { // if user doesnt exists
 
         // check if email taken
-        r.table('users').filter({
+        r.db(process.env.DATA_DB).table('users').filter({
           email: req.body.email.trim()
         }).count().gt(0).run(req._dbconn, function (err, userEmail) {
           if (err) next(err);
@@ -191,7 +191,7 @@ router.post('/register', async function (req, res, next) {
             };
 
             // create user
-            r.table('users').insert(user).run(req._dbconn, function (err, result) {
+            r.db(process.env.DATA_DB).table('users').insert(user).run(req._dbconn, function (err, result) {
               if (err) next(err);
               let jsonResponse = {
                 status: 201,
@@ -221,7 +221,6 @@ router.post('/register', async function (req, res, next) {
 });
 /* POST login */
 router.post('/login', async function (req, res, next) {
-
   try {
     await checkPassword(req.body.password);
   } catch (e) {
@@ -229,26 +228,20 @@ router.post('/login', async function (req, res, next) {
       status: 400,
       message: e
     };
-
     return res.status(400).send(response);
   }
-
   // check if user with such an username exists
-  r.table('users').filter({
+  r.db(process.env.DATA_DB).table('users').filter({
     username: req.body.username.toLowerCase()
   }).run(req._dbconn, function (err, cursor) {
     if (err) next(err);
-
-
     cursor.toArray(function (err, user) {
       if (err) next(err);
-
       if (user[0]) { // if user exists
         let hashPass = user[0].password;
         // compare passwords
         bcrypt.compare(req.body.password, hashPass, function (err, correctPass) {
           if (err) next(err);
-
           if (correctPass) {
             // Logged in
             userInformation = {
@@ -274,11 +267,9 @@ router.post('/login', async function (req, res, next) {
               data: null,
               message: "Wrong password"
             };
-
             return res.status(401).json(jsonResponse);
           }
         });
-
       } else {
         // send error
         let jsonResponse = {
@@ -289,7 +280,6 @@ router.post('/login', async function (req, res, next) {
         return res.status(400).json(jsonResponse);
       }
     });
-
   });
 });
 /* POST forgot */
@@ -297,7 +287,7 @@ router.post('/forgot', function (req, res, next) {
   // check if user wants to remember by username or password
   if (req.body.username) {
     // check if user with such an username exists
-    r.table('users').filter({
+    r.db(process.env.DATA_DB).table('users').filter({
       username: req.body.username.trim().toLowerCase()
     }).run(req._dbconn, function (err, cursor) {
       if (err) next(err);
@@ -332,7 +322,7 @@ router.post('/forgot', function (req, res, next) {
     });
   } else if (req.body.email) {
     // check if user with such an email exists
-    r.table('users').filter({
+    r.db(process.env.DATA_DB).table('users').filter({
       email: req.body.email.trim()
     }).run(req._dbconn, function (err, cursor) {
       if (err) next(err);
@@ -373,7 +363,7 @@ router.post('/forgot', function (req, res, next) {
 router.get('/forgot', function (req, res, next) {
   if (req.headers.authorization) {
     const forgotToken = req.headers.authorization;
-    r.table('resetPassTokens').filter({
+    r.db(process.env.DATA_DB).table('resetPassTokens').filter({
       token: forgotToken
     }).run(req._dbconn, function (err, cursor) {
       if (err) {
@@ -386,7 +376,7 @@ router.get('/forgot', function (req, res, next) {
           return next(err);
         }
         if (rows[0]) {
-          r.table('users').get(rows[0].userID).run(req._dbconn, function (err, result) {
+          r.db(process.env.DATA_DB).table('users').get(rows[0].userID).run(req._dbconn, function (err, result) {
             if (err) {
               internalServerErrorResponse(res, "Error while getting data about user from db");
               return next(err);
@@ -423,7 +413,7 @@ router.use('/recover', function (req, res, next) {
   const recoverToken = req.body.recoverToken.trim();
 
   // check if an user id and recover token exist in the same document
-  r.table('resetPassTokens').filter({
+  r.db(process.env.DATA_DB).table('resetPassTokens').filter({
     userID: userID,
     token: recoverToken
   }).run(req._dbconn, function (err, cursor) {
@@ -437,17 +427,17 @@ router.use('/recover', function (req, res, next) {
         // encrypt new password
         const newPassword = await bcrypt.hash(req.body.newPassword.trim(), 10);
         // update password
-        r.table('users').get(userID).update({
+        r.db(process.env.DATA_DB).table('users').get(userID).update({
           password: newPassword
         }).run(req._dbconn, function (err, result) {
           if (err) {
             internalServerErrorResponse(res, "Error while updating password.");
             return next(err);
           }
-          r.table('resetPassTokens').filter({
+          r.db(process.env.DATA_DB).table('resetPassTokens').filter({
             userID: userID
-          }).delete().run(req._dbconn, function(err, result){
-            if(err) next(err);
+          }).delete().run(req._dbconn, function (err, result) {
+            if (err) next(err);
             console.log(result)
           })
           const response = {

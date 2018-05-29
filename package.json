@@ -26,5 +26,8 @@
   "engines": {
     "npm": "5.7.1"
   },
-  "snyk": true
+  "snyk": true,
+  "devDependencies": {
+    "nodemon": "^1.17.5"
+  }
 }

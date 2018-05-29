@@ -31,3 +31,9 @@ npm-debug.log
 
 # enviroment variables
 .env
+
+# nanobox files
+boxfile.yml
+.yarn
+nohup.out
+yarn.lock
