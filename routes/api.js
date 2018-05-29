@@ -20,7 +20,6 @@ let transporter = nodemailer.createTransport({
 });
 function internalServerErrorResponse(res, message) {
   let jsonResponse = {
-    status: 500,
     message: message
   };
   res.status(500).json(jsonResponse);
@@ -77,7 +76,6 @@ function checkPassword(password) {
     resolve(true);
   });
 }
-
 function checkUserData(username, password, email) {
   return new Promise(resolve => {
     let errors = [];
@@ -114,7 +112,6 @@ function checkUserData(username, password, email) {
     resolve(true);
   });
 }
-
 function generateResetLink(uID, date, req, res) {
   return new Promise(resolve => {
     let token = jwt.sign({
@@ -126,22 +123,22 @@ function generateResetLink(uID, date, req, res) {
       userID: uID
     }).run(req._dbconn, function (err, cursor) {
       if (err) {
-        internalServerErrorResponse(res, "500: Internal server error.");
-        throw "Error while inserting token to database";
+        console.error(err);
+        throw "Error while filtering database";
       }
 
       cursor.toArray(function (err, rows) {
         if (err) {
-          internalServerErrorResponse(res, "500: Internal server error.");
-          throw "Error while inserting token to database";
+          console.error(err);
+          throw "Error while cursoring database response";
         }
         if (!rows[0]) {
-          r.table('resetPassTokens').insert({
+          r.db(process.env.DATA_DB).table('resetPassTokens').insert({
             token: token,
             userID: uID
           }).run(req._dbconn, function (err, res) {
             if (err) {
-              internalServerErrorResponse(res, "500: Internal server error.");
+              console.error(err);
               throw "Error while inserting token to database";
             }
             return resolve(link);
@@ -298,21 +295,19 @@ router.post('/forgot', function (req, res, next) {
             let resetLink = await generateResetLink(user[0].id, Date.now(), req, res); // using date and id to create an unique token
             await sendResetPass(user[0].username, user[0].email, resetLink);
           } catch (e) {
-            console.error(`error:`, e);
             let response = {
-              error: "Sorry, server malfunctioned, couldn't send you an error :("
+              error: e
             };
             return res.status(500).json(response);
           }
           let jsonResponse = {
-            status: 200,
             message: "Sent an email with instructions to reset password."
           };
           return res.status(200).json(jsonResponse);
+
         } else {
           // send error
           let jsonResponse = {
-            status: 400,
             message: "User with such an username doesn't exist"
           };
           return res.status(400).json(jsonResponse);
@@ -341,7 +336,6 @@ router.post('/forgot', function (req, res, next) {
           }
 
           let jsonResponse = {
-            status: 200,
             message: "Sent an email with instructions to reset password."
           };
           return res.status(200).json(jsonResponse);
@@ -349,7 +343,6 @@ router.post('/forgot', function (req, res, next) {
         } else {
           // send error
           let jsonResponse = {
-            status: 400,
             message: "User with such an email doesn't exist."
           };
           return res.status(200).json(jsonResponse);
