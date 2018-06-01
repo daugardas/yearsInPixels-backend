@@ -1,0 +1,30 @@
+{
+  "name": "yip-backend",
+  "version": "1.0.0",
+  "repository": "https://github.com/daugardas/yearsInPixels-backend.git",
+  "author": "Daugardas Luksas",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "bcrypt": "^2.0.1",
+    "body-parser": "~1.18.2",
+    "cookie-parser": "~1.4.3",
+    "cors": "^2.8.4",
+    "debug": "~2.6.9",
+    "dotenv": "^5.0.1",
+    "express": "~4.15.5",
+    "jade": "~1.11.0",
+    "jsonwebtoken": "^8.2.1",
+    "morgan": "~1.9.0",
+    "nodemailer": "^4.6.4",
+    "request": "^2.87.0",
+    "rethinkdb": "^2.3.3",
+    "serve-favicon": "~2.4.5"
+  },
+  "devDependencies": {
+    "nodemon": "^1.17.5"
+  }
+}
