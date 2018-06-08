@@ -27,12 +27,9 @@ function deleteUser(dbConn, userID) {
     });
   });
 }
-function internalServerErrorResponse(res, err, message) {
-  console.error(err);
+function internalServerErrorResponse(res, err) {
   let jsonResponse = {
-    status: 500,
-    data: null,
-    message: message
+    message: err
   };
   res.status(500).json(jsonResponse);
 }
@@ -47,9 +44,28 @@ function comparePasswords(received, existingHash) {
   });
 }
 /* GET USER DATA */
-router.get('/', function (req, res) {
-  res.send({
-    "user": req.decoded
+router.get('/', function (req, res,next) {
+  r.db(process.env.DATA_DB).table('users').get(req.decoded.id).run(req._dbconn, function(err, result){
+    if (err) {
+      internalServerErrorResponse(res, err);
+      return next(err);
+    }
+    if(result){
+      let response = {
+        dateCreated: result.dateCreated,
+        id: result.id,
+        username: result.username,
+        email: result.email,
+        moods: result.moods,
+      };
+      return res.status(200).json(response);
+    } else{
+      // send error
+      let jsonResponse = {
+        message: "User doesn't exist"
+      };
+      return res.status(400).json(jsonResponse);
+    } 
   });
 });
 /* PUT USER DATA */
@@ -72,7 +88,7 @@ router.put('/', function (req, res, next) {
         // confirm passwords
         bcrypt.compare(req.body.password, hashPass, function (err, correctPass) {
           if (err) {
-            internalServerErrorResponse(res, err, "Internal Server Error");
+            internalServerErrorResponse(res, err);
             return next(err);
           }
           if (correctPass) {
@@ -160,14 +176,12 @@ router.delete('/', function (req, res, next) {
         try {
           let isPassCorrect = await comparePasswords(req.body.password, user[0].password);
           if (isPassCorrect) { // passwords match
-
             await deleteUser(req._dbconn, user[0].id).then(deleted => {
               let jsonResponse = {
                 message: "Succesfully deleted user profile"
               };
               return res.status(200).json(jsonResponse);
-            })
-
+            });
           } else {
             let jsonResponse = {
               error: "Bad password",
@@ -178,7 +192,6 @@ router.delete('/', function (req, res, next) {
           internalServerErrorResponse(res, e, "Encountered an error");
           return next(e);
         }
-
       } else {
         let jsonResponse = {
           error: "User not found"
@@ -186,6 +199,70 @@ router.delete('/', function (req, res, next) {
         return res.status(404).json(jsonResponse);
       }
     });
+  });
+});
+router.get('/mood', function(req, res, next){
+  r.db(process.env.DATA_DB).table('users').get(req.decoded.id).pluck('moods').run(req._dbconn, function(err, result){
+    if (err) {
+      internalServerErrorResponse(res, err);
+      return next(err);
+    }
+    if(result){
+      return res.status(200).json(result);
+    } else {
+      return res.status(400).json({
+        error: `Couldn't find user.`
+      });
+    }
+  })
+});
+router.post('/mood', async function (req, res, next) {
+  r.uuid().run(req._dbconn, function (err, result) {
+    if (err) {
+      internalServerErrorResponse(res, err, "Internal Server Error");
+      return next(err);
+    }
+    let newMoodID = result;
+    r.db(process.env.DATA_DB).table('users').get(req.decoded.id).update({
+      moods: r.row('moods').append({
+        moodName: req.body.moodName.trim(),
+        moodColor: req.body.moodColor,
+        moodID: newMoodID
+      })
+    }).run(req._dbconn, function (err, result) {
+      if (err) {
+        internalServerErrorResponse(res, err, "Internal Server Error");
+        return next(err);
+      }
+      return res.status(200).json({ message: "Successfully added new mood!" });
+    });
+  })
+});
+router.put('/mood', function (req, res, next) {
+  r.db(process.env.DATA_DB).table('users').get(req.decoded.id).update({
+    moods: r.row('moods').map(mood => r.branch(mood('moodID').eq(req.body.moodID), mood.merge(
+      {
+        moodName: req.body.moodName.trim(),
+        moodColor: req.body.moodColor
+      }), mood)
+    )
+  }).run(req._dbconn, function (err, result) {
+    if (err) {
+      internalServerErrorResponse(res, err, "Internal Server Error");
+      return next(err);
+    }
+    return res.status(200).json({ message: "Successfully updated mood!" })
+  });
+});
+router.delete('/mood', function (req, res, next) {
+  r.db(process.env.DATA_DB).table('users').get(req.decoded.id).update({
+    moods: r.row('moods').filter(mood => mood('moodID').ne(req.body.moodID))
+  }).run(req._dbconn, function (err, result) {
+    if (err) {
+      internalServerErrorResponse(res, err, "Internal Server Error");
+      return next(err);
+    }
+    return res.status(200).json({ message: "Successfully deleted mood!" })
   });
 });
 module.exports = router;

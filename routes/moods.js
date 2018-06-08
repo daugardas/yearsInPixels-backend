@@ -26,46 +26,33 @@ function getMoodsId(req) {
 }
 
 function checkMoodPost(req) {
-
   return new Promise(resolve => {
-
-    // if req.body is empty
     if (Object.keys(req.body).length === 0) {
       throw "Request JSON object is empty.";
     }
-
     if (!req.body.hasOwnProperty("date") || !req.body.hasOwnProperty("dayMoods")) {
       throw "Request JSON object is missing a property.";
     } else {
       let possibleErrors = [];
-      if (req.body.date.length < 3 || req.body.date.length > 3) {
-        possibleErrors.push("Request Date array has invalid length.");
-      }
-
       if (req.body.dayMoods.length === 0) {
         possibleErrors.push("Request dayMoods array is empty")
       } else {
         let noNeededProperty = false;
         req.body.dayMoods.forEach(mood => {
-
           if (!mood.hasOwnProperty("moodId") || !mood.hasOwnProperty("percentage")) {
             noNeededProperty = true;
           }
-
         });
         if (noNeededProperty) {
           possibleErrors.push("A mood doesn't have needed properties.")
         }
       }
-
       if (possibleErrors.length > 0) {
         let error = possibleErrors.join(" && ");
         throw error;
       }
       resolve("No errors.");
     }
-
-
   });
 }
 
@@ -169,14 +156,12 @@ router.get('/', function (req, res, next) {
 
 /* POST MOODS */
 router.post('/', async function (req, res, next) {
-
   let moodsID;
   try {
     await checkMoodPost(req);
     moodsID = await getMoodsId(req);
   } catch (checkErr) {
     let jsonResponse = {
-      status: 400,
       message: checkErr
     };
     return res.status(400).json(jsonResponse);

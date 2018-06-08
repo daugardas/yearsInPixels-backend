@@ -44,8 +44,7 @@ function sendResetPass(username, email, resetLink) {
       p {
         margin: 10px 0;
       }
-    </style>
-        
+    </style>  
     <div class="container">
       <h3 class="username">Hello, ${username}</h3>
       <p>We received a request from your account to change your password. If this was your request, click the link below to reset your password.</p>
@@ -58,7 +57,6 @@ function sendResetPass(username, email, resetLink) {
       subject: "Reset your password",
       html: htmlEmail
     };
-
     transporter.sendMail(mailOptions, function (error, response) {
       if (error) {
         throw error;
@@ -80,13 +78,11 @@ function checkPassword(password) {
 function checkUserData(username, password, email) {
   return new Promise(resolve => {
     let errors = [];
-
     // check email
     let emailRegEx = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     if (!emailRegEx.test(email)) {
       errors.push('Email adress is invalid.');
     }
-
     // simple password check
     if (password.length < 8 || password.length > 128) {
       errors.push(`Minimum password length is 8 characters, maximum is 128.`);
@@ -96,7 +92,6 @@ function checkUserData(username, password, email) {
 
       errors.push(`Password must be least one lowercase letter and one number or one lowecase letter and uppercase letter`);
     }
-
     // username check
     let noSpecialCharsRegExp = /\`|\~|\!|\@|\#|\$|\%|\^|\&|\*|\(|\)|\+|\=|\[|\{|\]|\}|\||\\|\'|\<|\,|\>|\?|\/|\""|\;|\:|\s/g;
     if (noSpecialCharsRegExp.test(username)) {
@@ -105,7 +100,6 @@ function checkUserData(username, password, email) {
     if (username.length < 5 || username.length > 35) {
       errors.push(`Username must be a minimum of 5 characters and a maximum 32 characters.`);
     }
-
     // return result
     if (errors.length > 0) {
       throw errors;
@@ -163,7 +157,6 @@ function verifyRecaptcha(response) {
     });
   });
 }
-/* POST register. */
 router.post('/register', async function (req, res, next) {
   // verify recaptcha
   try {
@@ -185,7 +178,6 @@ router.post('/register', async function (req, res, next) {
     await checkUserData(req.body.username.toLowerCase().trim(), req.body.password.trim(), req.body.email.trim());
   } catch (e) {
     let response = {
-      status: 400,
       errors: e,
       message: "Bad user input."
     };
@@ -205,19 +197,17 @@ router.post('/register', async function (req, res, next) {
         }).count().gt(0).run(req._dbconn, function (err, userEmail) {
           if (err) next(err);
           if (userEmail === false) { // if user doesnt exists
-
             const user = {
               username: req.body.username.toLowerCase().trim(),
               password: hash,
               email: req.body.email.trim(),
-              dateCreated: Date.now()
+              dateCreated: Date.now(),
+              moods: [{"moodName": "Excited","moodColor": "#CC29CC","moodID": "1"},{"moodName": "Happy","moodColor": "#FFFF00","moodID": "2"},{"moodName": "Normal","moodColor": "#00FBFF","moodID": "3"},{"moodName": "Nervous","moodColor": "#00FF00","moodID": "4"},{"moodName": "Sad","moodColor": "#008CFF","moodID": "5"},{"moodName": "Exhausted","moodColor": "#FF9100","moodID": "6"},{"moodName": "Bored", "moodColor": "#A3A3A3", "moodID": "7" }, {"moodName": "Angry", "moodColor": "#FF5B87", "moodID": "8"}]
             };
-
             // create user
             r.db(process.env.DATA_DB).table('users').insert(user).run(req._dbconn, function (err, result) {
               if (err) next(err);
               let jsonResponse = {
-                status: 201,
                 message: "Registered."
               };
               return res.status(201).send(jsonResponse);
@@ -225,7 +215,6 @@ router.post('/register', async function (req, res, next) {
           } else {
             // send an error
             let jsonResponse = {
-              status: 400,
               message: "User with such an email exists."
             };
             return res.status(400).send(jsonResponse);
@@ -234,7 +223,6 @@ router.post('/register', async function (req, res, next) {
       } else {
         // send an error
         let jsonResponse = {
-          status: 400,
           message: "User with such a username exists."
         };
         return res.status(400).send(jsonResponse);
@@ -242,13 +230,11 @@ router.post('/register', async function (req, res, next) {
     })
   });
 });
-/* POST login */
 router.post('/login', async function (req, res, next) {
   try {
     await checkPassword(req.body.password);
   } catch (e) {
     let response = {
-      status: 400,
       message: e
     };
     return res.status(400).send(response);
@@ -271,23 +257,21 @@ router.post('/login', async function (req, res, next) {
               dateCreated: user[0].dateCreated,
               email: user[0].email,
               id: user[0].id,
-              username: user[0].username
+              username: user[0].username,
+              moods: user[0].moods,
             };
-            var token = jwt.sign(userInformation, process.env.JWT_SECRET, {
+            var token = jwt.sign({id : user[0].id}, process.env.JWT_SECRET, {
               expiresIn: "1d"
             });
             let jsonResponse = {
-              status: 200,
               data: userInformation,
-              message: "Logged in",
+              message: "Logged in.",
               token: token
             };
             return res.status(200).json(jsonResponse);
           } else {
             // Incorrect pass
             let jsonResponse = {
-              status: 401,
-              data: null,
               message: "Wrong password"
             };
             return res.status(401).json(jsonResponse);
@@ -296,8 +280,6 @@ router.post('/login', async function (req, res, next) {
       } else {
         // send error
         let jsonResponse = {
-          status: 400,
-          data: null,
           message: "User with such an username doesn't exist"
         };
         return res.status(400).json(jsonResponse);
@@ -305,7 +287,6 @@ router.post('/login', async function (req, res, next) {
     });
   });
 });
-/* POST forgot */
 router.post('/forgot', function (req, res, next) {
   // check if user wants to remember by username or password
   if (req.body.username) {
@@ -378,7 +359,6 @@ router.post('/forgot', function (req, res, next) {
     });
   }
 });
-/* GET /forgot */
 router.get('/forgot', function (req, res, next) {
   if (req.headers.authorization) {
     const forgotToken = req.headers.authorization;
