@@ -107,50 +107,29 @@ function checkMoodDelete(req) {
     if (Object.keys(req.body).length === 0) {
       throw "Request JSON object is empty.";
     }
-
     // check if it has needed properties
     if (!req.body.hasOwnProperty("id")) {
       throw "Request doesn't have id of the mood you're trying to update";
     } else if (!(typeof req.body.id === "string")) {
       throw "Request id property's value isn't a string";
     }
-    resolve("No errors.");
+    resolve(true);
   });
 }
 /* GET MOODS */
 router.get('/', function (req, res, next) {
-  // find all user moods using user id
-  r.db(process.env.DATA_DB).table("moods").filter({
-    id: req.decoded.id
-  }).run(req._dbconn, function (err, cursor) {
+  r.db(process.env.DATA_DB).table("moods").get(req.decoded.id).pluck('moods').run(req._dbconn, function(err, result){
     if (err) {
-      internalServerErrorResponse(res, err, "Error happened when trying to connect to database.");
+      internalServerErrorResponse(res, err);
       return next(err);
     }
-
-    cursor.toArray(function (err, moods) {
-      if (err) {
-        internalServerErrorResponse(res, err, "Error happened when trying to cursor database answer");
-        return next(err);
-      }
-
-      // if user has moods
-      if (moods.length > 0) {
-        let jsonResponse = {
-          status: 200,
-          data: moods,
-          message: `Successfully retrieved ${moods[0].moods.length} ${moods[0].moods.length > 1 ? "days":"day"} of moods`
-        };
-        return res.status(200).json(jsonResponse)
-      } else { // user doesn't have moods
-
-        let jsonResponse = {
-          status: 400,
-          message: "User doesn't have any saved moods."
-        };
-        return res.status(400).json(jsonResponse);
-      }
-    });
+    if(result){
+      return res.status(200).json(result);
+    } else {
+      return res.status(400).json({
+        error: `Couldn't find moods.`
+      });
+    }
   });
 });
 
@@ -191,7 +170,6 @@ router.post('/', async function (req, res, next) {
       internalServerErrorResponse(res, updateErr, "Error when trying to append day moods to moods array in db");
       return next(updateErr);
     }
-
     if (updateRes.skipped > 0) { // document with such ID doesn't exist
       // create a document
       r.db(process.env.DATA_DB).table('moods').insert({
@@ -278,20 +256,16 @@ router.put('/', async function (req, res, next) {
 
 /* DELETE MOODS */
 router.delete('/', async function (req, res, next) {
-
   let userID = req.decoded.id;
-
   // verify request
   try {
     await checkMoodDelete(req);
   } catch (e) {
     let response = {
-      status: 400,
       message: e
     };
     return res.status(400).json(response);
   }
-
   r.db(process.env.DATA_DB).table('moods').get(userID).update({
     "moods": r.row('moods').filter(mood => mood('id').ne(req.body.id))
   }).run(req._dbconn, function (err, result) {
@@ -299,9 +273,7 @@ router.delete('/', async function (req, res, next) {
       internalServerErrorResponse(res, err, "Error happened while trying to delete a user mood.");
       return next(err);
     }
-
     let response = {
-      status: 200,
       message: "Successfully deleted a user mood or it didn't exist."
     };
     return res.status(200).json(response);
