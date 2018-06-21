@@ -4,11 +4,10 @@ var r = require('rethinkdb'); // database
 var jwt = require('jsonwebtoken');
 var TokenValidator = require('../middleware/TokenValidator');
 
-function internalServerErrorResponse(res, err, message) {
+function internalServerErrorResponse(res, err) {
+  console.error(err);
   let jsonResponse = {
-    status: 500,
-    data: null,
-    message: message
+    message: err
   };
   res.status(500).json(jsonResponse);
 }
@@ -118,12 +117,12 @@ function checkMoodDelete(req) {
 }
 /* GET MOODS */
 router.get('/', function (req, res, next) {
-  r.db(process.env.DATA_DB).table("moods").get(req.decoded.id).pluck('moods').run(req._dbconn, function(err, result){
+  r.db(process.env.DATA_DB).table("moods").get(req.decoded.id).pluck('moods').run(req._dbconn, function (err, result) {
     if (err) {
       internalServerErrorResponse(res, err);
       return next(err);
     }
-    if(result){
+    if (result) {
       return res.status(200).json(result);
     } else {
       return res.status(400).json({
@@ -181,7 +180,6 @@ router.post('/', async function (req, res, next) {
           return next(err);
         }
         let jsonResponse = {
-          status: 200,
           message: "Successfully inserted moods data to database."
         };
         return res.status(200).json(jsonResponse);
@@ -189,7 +187,6 @@ router.post('/', async function (req, res, next) {
 
     } else {
       let jsonResponse = {
-        status: 200,
         message: "Successfully inserted day moods data to database moods array."
       };
       return res.status(200).json(jsonResponse);
@@ -201,7 +198,6 @@ router.post('/', async function (req, res, next) {
 /* PUT MOODS */
 router.put('/', async function (req, res, next) {
   let userID = req.decoded.id;
-
   // verify request
   try {
     await checkMoodPut(req);
@@ -213,18 +209,10 @@ router.put('/', async function (req, res, next) {
     return res.status(400).json(jsonResponse);
   }
 
-  let merge;
-  if (req.body.hasOwnProperty('journal')) {
-    merge = {
-      "dayMoods": req.body.dayMoods,
-      "journal": req.body.journal
-    };
-  } else {
-    merge = {
-      "dayMoods": req.body.dayMoods,
-      "journal": null
-    };
-  }
+  let merge = {
+    "dayMoods": req.body.dayMoods,
+    "journal": req.body.journal
+  };
 
   r.db(process.env.DATA_DB).table('moods').get(userID).update({
     "moods": r.row('moods').map(function (mood) {

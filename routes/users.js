@@ -204,8 +204,7 @@ router.delete('/', function (req, res, next) {
 router.get('/mood', function(req, res, next){
   r.db(process.env.DATA_DB).table('users').get(req.decoded.id).pluck('moods').run(req._dbconn, function(err, result){
     if (err) {
-      internalServerErrorResponse(res, err);
-      return next(err);
+      return internalServerErrorResponse(res, err);
     }
     if(result){
       return res.status(200).json(result);

@@ -46,7 +46,7 @@ function sendResetPass(username, email, resetLink) {
       }
     </style>  
     <div class="container">
-      <h3 class="username">Hello, ${username}</h3>
+      <h3 class="username">Hello, ${username}.</h3>
       <p>We received a request from your account to change your password. If this was your request, click the link below to reset your password.</p>
       <a href="${resetLink}">Reset My Password</a>
       <p>If you did not forgot your password, you can safely ignore this email.</p>
@@ -113,7 +113,7 @@ function generateResetLink(uID, date, req, res) {
       id: uID,
       date: date
     }, process.env.JWT_SECRET);
-    let link = `https://yearsinpixels.com/reset/${token}`;
+    let link = `https://yearsinpixels.com/#/reset/${token}`;
     r.db(process.env.DATA_DB).table('resetPassTokens').filter({
       userID: uID
     }).run(req._dbconn, function (err, cursor) {
@@ -139,7 +139,7 @@ function generateResetLink(uID, date, req, res) {
             return resolve(link);
           });
         } else {
-          return resolve(`https://yearsinpixels.com/reset/${rows[0].token}`)
+          return resolve(`https://yearsinpixels.com/#/reset/${rows[0].token}`)
         }
       });
     });
@@ -202,15 +202,20 @@ router.post('/register', async function (req, res, next) {
               password: hash,
               email: req.body.email.trim(),
               dateCreated: Date.now(),
-              moods: [{"moodName": "Excited","moodColor": "#CC29CC","moodID": "1"},{"moodName": "Happy","moodColor": "#FFFF00","moodID": "2"},{"moodName": "Normal","moodColor": "#00FBFF","moodID": "3"},{"moodName": "Nervous","moodColor": "#00FF00","moodID": "4"},{"moodName": "Sad","moodColor": "#008CFF","moodID": "5"},{"moodName": "Exhausted","moodColor": "#FF9100","moodID": "6"},{"moodName": "Bored", "moodColor": "#A3A3A3", "moodID": "7" }, {"moodName": "Angry", "moodColor": "#FF5B87", "moodID": "8"}]
+              moods: [{ "moodName": "Excited", "moodColor": "#CC29CC", "moodID": "1" }, { "moodName": "Happy", "moodColor": "#FFFF00", "moodID": "2" }, { "moodName": "Normal", "moodColor": "#00FBFF", "moodID": "3" }, { "moodName": "Nervous", "moodColor": "#00FF00", "moodID": "4" }, { "moodName": "Sad", "moodColor": "#008CFF", "moodID": "5" }, { "moodName": "Exhausted", "moodColor": "#FF9100", "moodID": "6" }, { "moodName": "Bored", "moodColor": "#A3A3A3", "moodID": "7" }, { "moodName": "Angry", "moodColor": "#FF5B87", "moodID": "8" }]
             };
             // create user
             r.db(process.env.DATA_DB).table('users').insert(user).run(req._dbconn, function (err, result) {
-              if (err) next(err);
+              if (err) { return next(err); }
               let jsonResponse = {
                 message: "Registered."
               };
-              return res.status(201).send(jsonResponse);
+              let userID = result.generated_keys[0];
+              r.db(process.env.DATA_DB).table('moods').insert({ id: userID, moods: [] }).run(req._dbconn, function (err, result) {
+                if (err) { return next(err); }
+                return res.status(201).send(jsonResponse);
+              })
+
             });
           } else {
             // send an error
@@ -260,7 +265,7 @@ router.post('/login', async function (req, res, next) {
               username: user[0].username,
               moods: user[0].moods,
             };
-            var token = jwt.sign({id : user[0].id}, process.env.JWT_SECRET, {
+            var token = jwt.sign({ id: user[0].id }, process.env.JWT_SECRET, {
               expiresIn: "1d"
             });
             let jsonResponse = {
