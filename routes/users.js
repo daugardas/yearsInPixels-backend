@@ -44,13 +44,13 @@ function comparePasswords(received, existingHash) {
   });
 }
 /* GET USER DATA */
-router.get('/', function (req, res,next) {
-  r.db(process.env.DATA_DB).table('users').get(req.decoded.id).run(req._dbconn, function(err, result){
+router.get('/', function (req, res, next) {
+  r.db(process.env.DATA_DB).table('users').get(req.decoded.id).run(req._dbconn, function (err, result) {
     if (err) {
       internalServerErrorResponse(res, err);
       return next(err);
     }
-    if(result){
+    if (result) {
       let response = {
         dateCreated: result.dateCreated,
         id: result.id,
@@ -59,13 +59,13 @@ router.get('/', function (req, res,next) {
         moods: result.moods,
       };
       return res.status(200).json(response);
-    } else{
+    } else {
       // send error
       let jsonResponse = {
         message: "User doesn't exist"
       };
       return res.status(400).json(jsonResponse);
-    } 
+    }
   });
 });
 /* PUT USER DATA */
@@ -201,12 +201,12 @@ router.delete('/', function (req, res, next) {
     });
   });
 });
-router.get('/mood', function(req, res, next){
-  r.db(process.env.DATA_DB).table('users').get(req.decoded.id).pluck('moods').run(req._dbconn, function(err, result){
+router.get('/mood', function (req, res, next) {
+  r.db(process.env.DATA_DB).table('users').get(req.decoded.id).pluck('moods').run(req._dbconn, function (err, result) {
     if (err) {
       return internalServerErrorResponse(res, err);
     }
-    if(result){
+    if (result) {
       return res.status(200).json(result);
     } else {
       return res.status(400).json({
@@ -253,15 +253,51 @@ router.put('/mood', function (req, res, next) {
     return res.status(200).json({ message: "Successfully updated mood!" })
   });
 });
+
+async function checkUserMoodsDelete(req) {
+  return new Promise(resolve => {
+    // pluck all the moods
+    r.db(process.env.DATA_DB).table("moods").get(req.decoded.id).pluck('moods').run(req._dbconn, function (err, result) {
+      if (result) {
+        // loop through result array containing every posted day mood
+        let removeMood = true;
+        for (let i = 0; i < result.moods.length; i++) {
+          let moodsArrayItem = result.moods[i].dayMoods;
+          if (removeMood) {
+            // loop through the set day moods id's
+            for (let j = 0; j < moodsArrayItem.length; j++) {
+              let mood = moodsArrayItem[j];
+              if (req.body.moodID === mood.moodId) {
+                removeMood = false;
+                break; // dont need to check other moods, cause only one is enough
+              }
+            }
+          } else {
+            break;
+          }
+        }
+        resolve(removeMood);
+      }
+    });
+
+  })
+}
 router.delete('/mood', function (req, res, next) {
-  r.db(process.env.DATA_DB).table('users').get(req.decoded.id).update({
-    moods: r.row('moods').filter(mood => mood('moodID').ne(req.body.moodID))
-  }).run(req._dbconn, function (err, result) {
-    if (err) {
-      internalServerErrorResponse(res, err, "Internal Server Error");
-      return next(err);
+  // check if this emotions is in use in the yearly pixel grid
+  checkUserMoodsDelete(req).then(removeMood => {
+    if (removeMood) {
+      r.db(process.env.DATA_DB).table('users').get(req.decoded.id).update({
+        moods: r.row('moods').filter(mood => mood('moodID').ne(req.body.moodID))
+      }).run(req._dbconn, function (err, result) {
+        if (err) {
+          internalServerErrorResponse(res, err);
+          return next(err);
+        }
+        return res.status(200).json({ message: "Successfully deleted mood!" })
+      });
+    } else {
+      return res.status(403).json({ error: "The emotion you're trying to delete, is currently in use by a day." });
     }
-    return res.status(200).json({ message: "Successfully deleted mood!" })
-  });
+  }); 
 });
 module.exports = router;
