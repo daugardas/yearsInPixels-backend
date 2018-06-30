@@ -27,24 +27,7 @@ function internalServerErrorResponse(res, message) {
 }
 function sendResetPass(username, email, resetLink) {
   new Promise(resolve => {
-    let htmlEmail = `
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        font-family: Arial, Helvetica, sans-serif;
-      }
-      .container {
-        display: block;
-        margin: 20px 0 0 20px;
-      }
-      .username {
-        margin-bottom: 10px;
-      }
-      p {
-        margin: 10px 0;
-      }
-    </style>  
+    let htmlEmail = ` 
     <div class="container">
       <h3 class="username">Hello, ${username}.</h3>
       <p>We received a request from your account to change your password. If this was your request, click the link below to reset your password.</p>
