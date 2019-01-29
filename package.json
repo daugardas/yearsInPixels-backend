@@ -6,7 +6,9 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www"
+    "start": "node ./bin/www",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
   "dependencies": {
     "bcrypt": "^2.0.1",
@@ -22,9 +24,11 @@
     "nodemailer": "^4.6.4",
     "request": "^2.87.0",
     "rethinkdb": "^2.3.3",
-    "serve-favicon": "~2.4.5"
+    "serve-favicon": "~2.4.5",
+    "snyk": "^1.123.0"
   },
   "devDependencies": {
     "nodemon": "^1.17.5"
-  }
+  },
+  "snyk": true
 }
